@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>atari8bit.online</title>
+	<style>
+		#screen-wrapper {
+			position: relative;
+		}
+
+		#screen-wrapper.fullscreen {
+			background: black;
+		}
+
+		#screen {
+			display: block;
+			background: black;
+			width: 600px;
+			height: 400px;
+		}
+
+		#screen-wrapper.fullscreen #screen {
+			height: 100%;
+			width: auto;
+			margin: 0 auto;
+		}
+	</style>
+</head>
+<body>
+	<h1>atari8bit.online</h1>
+	<div class="warning">
+		<p><strong>⚠️ACHTUNG⚠️</strong><br>This is an experimental proof-of-concept for compiling the core of <a href="https://atari800.github.io/">Atari800</a> emulator for the web using WebAssembly</p>
+		<p>See below for <a href="#knownissues">known issues</a> and <a href="#todo">todo list</a>. Feedback welcome via Mastodon <a href="https://oldbytes.space/@noah">@noah@oldbytes.space</a> or on <a href="https://github.com/nwah/atari8bitonline">GitHub</a>.</p>
+	</div>
+
+	<div id="screen-wrapper">
+		<canvas id="screen" width="336" height="192"></canvas>
+		<br>
+		<button id="enter-fullscreen">Fullscreen</button>
+		<button id="pause-resume">Pause</button>
+	</div>
+
+	<hr>
+
+	Power: <button id="power-on" disabled>ON</button> <button id="power-off" disabled>OFF</button> |
+	<button id="reset">Reset</button>
+	<button id="option">Option</button>
+	<button id="select">Select</button>
+	<button id="start">Start</button>
+	<button id="help" disabled>Help</button>
+
+	<hr>
+	<label><input type="checkbox" id="basic" checked>Built-in BASIC</label> |
+	<label><input type="checkbox" id="joystick" checked>Keyboard Joystick (arrow keys + left [alt])</label>
+
+	<hr>
+	<label>Executable: <input id="executable" type="file" accept=".xex,.bas"></label> <button id="executable-eject" disabled>⏏</button>
+
+	<hr>
+	<label>Cartridge: <input id="cartridge" type="file" accept=".car,.rom,.bin"></label> <button id="cartridge-eject" disabled>⏏</button>
+	<label>Cassette: <input id="cassette" type="file" accept=".xex,.bas" disabled></label> <button id="cassette-eject" disabled>⏏</button>
+
+
+	<hr>
+	<label>Disk 1: <input id="disk1" type="file" accept=".atr,.atx"></label> <button id="disk1-eject" disabled>⏏</button>  |
+	<label>Disk 2: <input id="disk2" type="file" accept=".atr,.atx"></label> <button id="disk2-eject" disabled>⏏</button> 
+	
+	<hr>
+
+	<h3 id="knownissues">Known Issues</h3>
+	<ul>
+		<li>most .rom/.bin files failing to load</li>
+		<li>caps lock is flakey</li>
+		<li>.xex sound is messed up</li>
+	</ul>
+
+	<h3 id="todo">TODO</h3>
+	<ul>
+		<li>cassette images</li>
+		<li>gamepad support</li>
+		<li>second (3rd, 4th) joysticks</li>
+		<li>an actual UI</li>
+		<li>non-readonly disks / saving updated disks</li>
+		<li>passing in image/rom via URL params</li>
+		<li>on-screen keyboard</li>
+		<li>switching machine type</li>
+		<li>more than 2 disks</li>
+		<li>other devices: printer, modem, etc.</li>
+		<li>...a bunch of other things</li>
+		<li><strike>fullscreen</strike></li>
+	</ul>
+
+
+	<script src="keymap.js"></script>
+	<script src="libatari800.js"></script>
+	<script>
+		const screenWrapper = document.getElementById('screen-wrapper')
+		const fullscreenButton = document.getElementById('enter-fullscreen')
+		const canvas = document.getElementById('screen')
+		const powerOnButton = document.getElementById('power-on')
+		const powerOffButton = document.getElementById('power-off')
+		const resetButton = document.getElementById('reset')
+		const optionButton = document.getElementById('option')
+		const selectButton = document.getElementById('select')
+		const startButton = document.getElementById('start')
+		const pauseResumeButton = document.getElementById('pause-resume')
+
+		const basicCheckbox = document.getElementById('basic')
+		const joystickCheckbox = document.getElementById('joystick')
+		const cartridgeFileInput = document.getElementById('cartridge')
+		const cartridgeEjectButton = document.getElementById('cartridge-eject')
+		const cassetteFileInput = document.getElementById('cassette')
+		const cassetteEjectButton = document.getElementById('cassette-eject')
+		const executableFileInput = document.getElementById('executable')
+		const executableEjectButton = document.getElementById('executable-eject')
+		const disk1FileInput = document.getElementById('disk1')
+		const disk1EjectButton = document.getElementById('disk1-eject')
+		const disk2FileInput = document.getElementById('disk2')
+		const disk2EjectButton = document.getElementById('disk2-eject')
+
+		let atari
+		let paused
+
+		function powerOn() {
+			powerOnButton.disabled = true
+			powerOffButton.disabled = false
+
+			if (atari) {
+				atari.lib.coldstart()
+			} else {
+				atari = new Atari800(canvas)	
+				atari.initialize()
+				// atari.startAudio()
+				atari.setKeyboardJoystickEnabled(true)
+				bindEvents()
+			}
+		}
+
+		function powerOff() {
+			powerOnButton.disabled = false
+			powerOffButton.disabled = true
+
+			if (atari) {
+				atari.stop()
+			}
+		}
+
+		function pauseResume() {
+			if (paused) {
+				atari.resume()
+				paused = false
+				pauseResumeButton.innerText = 'Pause'
+			} else {
+				atari.pause()
+				paused = true
+				pauseResumeButton.innerText = 'Resume'
+			}
+		}
+
+		function bindEvents() {
+			pauseResumeButton.addEventListener('click', pauseResume)
+			fullscreenButton.addEventListener('click', toggleFullscreen)
+			screenWrapper.addEventListener('fullscreenchange', fullscreenChanged)
+
+			// Console buttons
+			resetButton.addEventListener('mousedown', () => atari.resetKeyPress())
+			resetButton.addEventListener('mouseup', () => atari.resetKeyRelease())
+			optionButton.addEventListener('mousedown', () => atari.optionKeyPress())
+			optionButton.addEventListener('mouseup', () => atari.optionKeyRelease())
+			optionButton.addEventListener('mousedown', () => atari.optionKeyPress())
+			optionButton.addEventListener('mouseup', () => atari.optionKeyRelease())
+			selectButton.addEventListener('mousedown', () => atari.selectKeyPress())
+			selectButton.addEventListener('mouseup', () => atari.selectKeyRelease())
+			startButton.addEventListener('mousedown', () => atari.startKeyPress())
+			startButton.addEventListener('mouseup', () => atari.startKeyRelease())
+
+			// Settings
+			basicCheckbox.addEventListener('change', e => atari.setBasicEnabled(basicCheckbox.checked))
+			joystickCheckbox.addEventListener('change', e => atari.setKeyboardJoystickEnabled(joystickCheckbox.checked))
+
+			// Cartridge and Executable
+			cartridgeFileInput.addEventListener('change', insertCartridge)
+			cartridgeEjectButton.addEventListener('click', removeCartridge)
+			executableFileInput.addEventListener('change', runExecutable)
+			executableEjectButton.addEventListener('click', clearExecutable)
+
+			// Disks
+			disk1FileInput.addEventListener('change', insertDisk1)
+			disk1EjectButton.addEventListener('click', ejectDisk1)
+			disk2FileInput.addEventListener('change', insertDisk2)
+			disk2EjectButton.addEventListener('click', ejectDisk2)
+		}
+
+		function toggleFullscreen() {
+			screenWrapper.requestFullscreen()
+			navigator.keyboard.lock(["Escape"]);
+		}
+
+		function fullscreenChanged(e) {
+			if (document.fullscreenElement) {
+				screenWrapper.classList.add('fullscreen')
+			} else {
+				screenWrapper.classList.remove('fullscreen')
+			}
+		}
+
+		function insertCartridge() {
+			if (!cartridgeFileInput.files.length) return
+			executableFileInput.value = ''
+			getSelectedFile(cartridgeFileInput, ({ filename, filedata }) => {
+				atari.insertCartridge(filedata, filename)
+				cartridgeEjectButton.disabled = false
+				cartridgeFileInput.disabled = true
+			})
+		}
+
+		function removeCartridge() {
+			atari.removeCartridge()
+			// atari.coldRestart()
+			cartridgeFileInput.value = ''
+			cartridgeFileInput.disabled = false
+			cartridgeEjectButton.disabled = true
+		}
+
+		function runExecutable() {
+			if (!executableFileInput.files.length) return
+			cartridgeFileInput.value = ''
+			disk1FileInput.value = ''
+			disk2FileInput.value = ''
+			getSelectedFile(executableFileInput, ({ filename, filedata }) => {
+				atari.loadExecutable(filedata, filename)
+				executableEjectButton.disabled = false
+				executableFileInput.disabled = true
+			})
+		}
+
+		function clearExecutable() {
+			atari.removeExecutable()
+			// atari.coldRestart()
+			executableEjectButton.disabled = true
+			executableFileInput.disabled = false
+			executableFileInput.value = ''
+		}
+
+		function insertCassette() {
+			if (!cassetteFileInput.files.length) return
+			getSelectedFile(cassetteFileInput, ({ filename, filedata }) => {
+				atari.insertCassette(filedata, filename)
+				cassetteEjectButton.disabled = false
+				cassetteFileInput.disabled = true
+			})
+		}
+
+		function ejectCassette() {
+			atari.ejectCassette()
+			cassetteEjectButton.disabled = true
+			cassetteFileInput.disabled = false
+			cassetteFileInput.value = ''
+		}
+
+		function insertDisk1() {
+			if (!disk1FileInput.files.length) return
+			getSelectedFile(disk1FileInput, ({ filename, filedata }) => {
+				atari.insertDisk1(filedata, filename)
+				disk1EjectButton.disabled = false
+				disk1FileInput.disabled = true
+			})
+		}
+
+		function ejectDisk1() {
+			atari.ejectDisk1()
+			disk1EjectButton.disabled = true
+			disk1FileInput.disabled = false
+			disk1FileInput.value = ''
+		}
+
+		function insertDisk2() {
+			if (!disk2FileInput.files.length) return
+			getSelectedFile(disk2FileInput, ({ filename, filedata }) => {
+				atari.insertDisk2(filedata, filename)
+				disk2EjectButton.disabled = false
+				disk2FileInput.disabled = true
+			})
+		}
+
+		function ejectDisk2() {
+			atari.ejectDisk2()
+			disk2EjectButton.disabled = true
+			disk2FileInput.disabled = false
+			disk2FileInput.value = ''
+		}
+
+		function getSelectedFile(input, cb) {
+			const file = input.files[0]
+			const reader = new FileReader()
+			reader.onloadend = e => {
+				const arrayBuffer = e.target.result
+				cb({ filename: file.name, filedata: arrayBuffer })
+			}
+			reader.readAsArrayBuffer(file)
+		}
+
+		function setup() {
+			powerOn()
+		}
+
+		window.addEventListener('click', () => {
+			if (atari && !atari.audioEnabled) atari.startAudio()
+		})
+
+		powerOnButton.addEventListener('click', powerOn)
+		powerOffButton.addEventListener('click', powerOff)
+
+		Module.postRun = [setup];
+	</script>
+</body>
+</html>
