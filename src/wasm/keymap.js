@@ -241,10 +241,16 @@ AKEY_5200_ASTERISK = 0x27
 
 
 const KEY_AKEY = {
+  Home: AKEY_CLEAR,
   Break: AKEY_BREAK,
   Backquote: AKEY_BREAK,
   AltRight: AKEY_ATARI,
   AltGraph: AKEY_ATARI,
+
+  ArrowLeft: AKEY_LEFT,
+  ArrowRight: AKEY_RIGHT,
+  ArrowUp: AKEY_UP,
+  ArrowDown: AKEY_DOWN,
 
   Escape: AKEY_ESCAPE,
   Enter: AKEY_RETURN,

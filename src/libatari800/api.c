@@ -40,6 +40,7 @@
 #include "memory.h"
 #include "screen.h"
 #include "sio.h"
+#include "cartridge.h"
 #include "../sound.h"
 #include "util.h"
 #include "libatari800/main.h"
@@ -251,6 +252,21 @@ int libatari800_mount_disk_image(int diskno, const char *filename, int readonly)
 }
 
 
+/** Remove disk image from a disk drive
+ * 
+ * Remove virtual floppy image frome one of the emulated disk drives.
+ * 
+ * @param diskno disk drive number (1 - 8)
+ * 
+ * @retval FALSE if error
+ * @retval TRUE if successful
+ */
+void libatari800_dismount(int diskno)
+{
+	return SIO_Dismount(diskno);
+}
+
+
 /** Restart emulation using file
  * 
  * Perform a cold start with a disk image, executable file, cartridge, cassette image,
@@ -274,6 +290,32 @@ int libatari800_reboot_with_file(const char *filename)
 		Atari800_Coldstart();
 	}
 	return file_type;
+}
+
+
+/** Insert cartridge and auto reboot
+ * 
+ * Inserts the provide filename into the main cartridge slot, and then does
+ * reboot.
+ * 
+ * @param path to file
+ * 
+ * @returns size in kb if cartridge type not recogized, 0 if recognized.
+ */
+int libatari800_insert_cartridge_auto_reboot(const char *filename)
+{
+	return CARTRIDGE_InsertAutoReboot(filename);
+}
+
+
+/** Remove cartridge and auto reboot
+ * 
+ * Removes any currently-inserted cartridge from the main cartridge slot,
+ * and then does a reboot.
+ */
+void libatari800_remove_cartridge_auto_reboot(void)
+{
+	CARTRIDGE_Remove();
 }
 
 
@@ -476,6 +518,20 @@ void libatari800_restore_state(emulator_state_t *state)
 	MEMORY_selftest_enabled = state->flags.selftest_enabled;
 	Atari800_nframes = state->flags.nframes;
 	sample_residual = (double)state->flags.sample_residual / (double)0xffffffff;
+}
+
+
+/** Perform a warm start.
+ */
+void libatari800_warmstart() {
+	Atari800_Warmstart();
+}
+
+
+/** Perform a cold start.
+ */
+void libatari800_coldstart() {
+	Atari800_Coldstart();
 }
 
 

@@ -17,11 +17,14 @@
 			background: black;
 			width: 600px;
 			height: 400px;
+			aspect-ratio: 4 / 3;
 		}
 
 		#screen-wrapper.fullscreen #screen {
 			height: 100%;
-			width: auto;
+			width: 100%;
+			max-height: 100%;
+			max-width: 100%;
 			margin: 0 auto;
 		}
 	</style>
@@ -35,14 +38,15 @@
 
 	<div id="screen-wrapper">
 		<canvas id="screen" width="336" height="192"></canvas>
-		<br>
+		<p><strong>Special keys:</strong> Right [Alt] / [AltGr] = Inverse Atascii | [Home] = Clear | [`] / [Break] = Break</p>
+		<button id="power-on">POWER ON</button>
 		<button id="enter-fullscreen">Fullscreen</button>
 		<button id="pause-resume">Pause</button>
 	</div>
 
 	<hr>
 
-	Power: <button id="power-on" disabled>ON</button> <button id="power-off" disabled>OFF</button> |
+	<button id="power-off" disabled>Cold Restart</button> |
 	<button id="reset">Reset</button>
 	<button id="option">Option</button>
 	<button id="select">Select</button>
@@ -51,14 +55,14 @@
 
 	<hr>
 	<label><input type="checkbox" id="basic" checked>Built-in BASIC</label> |
-	<label><input type="checkbox" id="joystick" checked>Keyboard Joystick (arrow keys + left [alt])</label>
+	<label><input type="checkbox" id="joystick">Keyboard Joystick (Arrow Keys + Left [Alt])</label>
 
 	<hr>
 	<label>Executable: <input id="executable" type="file" accept=".xex,.bas"></label> <button id="executable-eject" disabled>⏏</button>
 
-	<hr>
+	<!-- <hr> -->
 	<label>Cartridge: <input id="cartridge" type="file" accept=".car,.rom,.bin"></label> <button id="cartridge-eject" disabled>⏏</button>
-	<label>Cassette: <input id="cassette" type="file" accept=".xex,.bas" disabled></label> <button id="cassette-eject" disabled>⏏</button>
+	<!-- <label>Cassette: <input id="cassette" type="file" accept=".xex,.bas" disabled></label> <button id="cassette-eject" disabled>⏏</button> -->
 
 
 	<hr>
@@ -69,25 +73,27 @@
 
 	<h3 id="knownissues">Known Issues</h3>
 	<ul>
+		<li>unstable framerate</li>
 		<li>most .rom/.bin files failing to load</li>
-		<li>caps lock is flakey</li>
-		<li>.xex sound is messed up</li>
+		<li>caps lock toggle is flakey</li>
+		<li>sound is choppy—especially after loading .xex</li>
+		<li>lots of issues with getting in a weird state when swapping media</li>
 	</ul>
 
 	<h3 id="todo">TODO</h3>
 	<ul>
-		<li>cassette images</li>
-		<li>gamepad support</li>
+		<li>add .cas (tape) support</li>
+		<li><strike>gamepad support</strike></li>
+		<li><strike>fullscreen</strike></li>
 		<li>second (3rd, 4th) joysticks</li>
 		<li>an actual UI</li>
 		<li>non-readonly disks / saving updated disks</li>
-		<li>passing in image/rom via URL params</li>
-		<li>on-screen keyboard</li>
+		<li>auto-loading remote disk image/rom via URL params</li>
+		<li>virtual keyboard</li>
 		<li>switching machine type</li>
-		<li>more than 2 disks</li>
+		<li>more than 2 disk drives</li>
 		<li>other devices: printer, modem, etc.</li>
 		<li>...a bunch of other things</li>
-		<li><strike>fullscreen</strike></li>
 	</ul>
 
 
@@ -121,28 +127,36 @@
 		let atari
 		let paused
 
+		// function powerOn() {
+		// 	powerOnButton.disabled = true
+		// 	powerOffButton.disabled = false
+
+		// 	if (atari) {
+		// 		atari.lib.coldstart()
+		// 	} else {
+		// 		atari = new Atari800(canvas)	
+		// 		atari.initialize()
+		// 		// atari.startAudio()
+		// 		// atari.setKeyboardJoystickEnabled(true)
+		// 		bindEvents()
+		// 	}
+		// }
+
 		function powerOn() {
+			atari.startAudio()
+			atari.initialize()
 			powerOnButton.disabled = true
 			powerOffButton.disabled = false
-
-			if (atari) {
-				atari.lib.coldstart()
-			} else {
-				atari = new Atari800(canvas)	
-				atari.initialize()
-				// atari.startAudio()
-				atari.setKeyboardJoystickEnabled(true)
-				bindEvents()
-			}
 		}
 
 		function powerOff() {
-			powerOnButton.disabled = false
-			powerOffButton.disabled = true
+			atari.lib.coldstart()
+			// powerOnButton.disabled = false
+			// powerOffButton.disabled = true
 
-			if (atari) {
-				atari.stop()
-			}
+			// if (atari) {
+			// 	atari.stop()
+			// }
 		}
 
 		function pauseResume() {
@@ -301,12 +315,13 @@
 		}
 
 		function setup() {
-			powerOn()
+			atari = new Atari800(canvas)
+			bindEvents()
 		}
 
-		window.addEventListener('click', () => {
-			if (atari && !atari.audioEnabled) atari.startAudio()
-		})
+		// window.addEventListener('click', () => {
+		// 	if (atari && !atari.audioEnabled) atari.startAudio()
+		// })
 
 		powerOnButton.addEventListener('click', powerOn)
 		powerOffButton.addEventListener('click', powerOff)

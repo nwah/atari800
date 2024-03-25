@@ -25,6 +25,7 @@ class Atari800 {
     this.lib.initDefault()
     this.startVideo()
     this.initKeyboard()
+    this.initGamepad()
   }
 
   stop() {
@@ -105,11 +106,17 @@ class Atari800 {
     const img = new ImageData(data, this.width, this.height);
     this.ctx.putImageData(img, 0, 0);
 
-    const now = window.performance.now()
-    if (now - this.lastFrame < this.interval) return
+    this.readGamepad()
 
-    this.advanceFrame()
-    const late = now % this.interval
+    const now = window.performance.now()
+    const elapsed = now - this.lastFrame
+    if (elapsed < this.interval) return
+
+    // for (let t = this.lastFrame; t < now; t += this.interval) {
+      this.advanceFrame()
+    // }
+
+    const late = elapsed % this.interval
     this.lastFrame = now - late
   }
 
@@ -286,6 +293,23 @@ class Atari800 {
 
   resetKeyRelease() {
     // this.lib.keyRelease(0, AKEY_WARMSTART, false, false)
+  }
+
+  initGamepad() {
+    // TODO: Handle multiple gamepads
+    window.addEventListener('gamepadconnected', e => { this.gamepad = e.gamepad })
+    window.addEventListener('gamepaddisconnected', e => { this.gamepad = null })
+  }
+
+  readGamepad() {
+    if (!this.gamepad) return
+    const { axes, buttons } = navigator.getGamepads()[0]
+    this.joystick.left = axes[0] < -0.85
+    this.joystick.right = axes[0] > 0.85
+    this.joystick.up = axes[1] < -0.85
+    this.joystick.down = axes[1] > 0.85
+    this.joystick.trigger = buttons[0].pressed || buttons[1].pressed
+    this.updateJoystick()
   }
 
   setBasicEnabled(enabled) {

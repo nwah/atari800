@@ -16,7 +16,7 @@ var Module = typeof Module != 'undefined' ? Module : {};
 
 // --pre-jses are emitted after the Module integration code, so that they can
 // refer to Module (if they choose; they can also define Module)
-// include: /var/folders/4n/w714g6px7f7cyhb1jz1yzfm00000gn/T/tmpig2tguon.js
+// include: /var/folders/4n/w714g6px7f7cyhb1jz1yzfm00000gn/T/tmpsufpkecl.js
 
   if (!Module.expectedDataFileDownloads) {
     Module.expectedDataFileDownloads = 0;
@@ -194,14 +194,14 @@ var REMOTE_PACKAGE_SIZE = metadata['remote_package_size'];
 
   })();
 
-// end include: /var/folders/4n/w714g6px7f7cyhb1jz1yzfm00000gn/T/tmpig2tguon.js
-// include: /var/folders/4n/w714g6px7f7cyhb1jz1yzfm00000gn/T/tmpy9yk950c.js
+// end include: /var/folders/4n/w714g6px7f7cyhb1jz1yzfm00000gn/T/tmpsufpkecl.js
+// include: /var/folders/4n/w714g6px7f7cyhb1jz1yzfm00000gn/T/tmpxvp5v07p.js
 
     // All the pre-js content up to here must remain later on, we need to run
     // it.
     if (Module['ENVIRONMENT_IS_PTHREAD'] || Module['$ww']) Module['preRun'] = [];
     var necessaryPreJSTasks = Module['preRun'].slice();
-  // end include: /var/folders/4n/w714g6px7f7cyhb1jz1yzfm00000gn/T/tmpy9yk950c.js
+  // end include: /var/folders/4n/w714g6px7f7cyhb1jz1yzfm00000gn/T/tmpxvp5v07p.js
 // include: /Users/nwah/Atari/atari800/src/wasm/wrapper.js
 class Atari800 {
   constructor(canvas) {
@@ -230,6 +230,7 @@ class Atari800 {
     this.lib.initDefault()
     this.startVideo()
     this.initKeyboard()
+    this.initGamepad()
   }
 
   stop() {
@@ -310,11 +311,17 @@ class Atari800 {
     const img = new ImageData(data, this.width, this.height);
     this.ctx.putImageData(img, 0, 0);
 
-    const now = window.performance.now()
-    if (now - this.lastFrame < this.interval) return
+    this.readGamepad()
 
-    this.advanceFrame()
-    const late = now % this.interval
+    const now = window.performance.now()
+    const elapsed = now - this.lastFrame
+    if (elapsed < this.interval) return
+
+    // for (let t = this.lastFrame; t < now; t += this.interval) {
+      this.advanceFrame()
+    // }
+
+    const late = elapsed % this.interval
     this.lastFrame = now - late
   }
 
@@ -493,6 +500,23 @@ class Atari800 {
     // this.lib.keyRelease(0, AKEY_WARMSTART, false, false)
   }
 
+  initGamepad() {
+    // TODO: Handle multiple gamepads
+    window.addEventListener('gamepadconnected', e => { this.gamepad = e.gamepad })
+    window.addEventListener('gamepaddisconnected', e => { this.gamepad = null })
+  }
+
+  readGamepad() {
+    if (!this.gamepad) return
+    const { axes, buttons } = navigator.getGamepads()[0]
+    this.joystick.left = axes[0] < -0.85
+    this.joystick.right = axes[0] > 0.85
+    this.joystick.up = axes[1] < -0.85
+    this.joystick.down = axes[1] > 0.85
+    this.joystick.trigger = buttons[0].pressed || buttons[1].pressed
+    this.updateJoystick()
+  }
+
   setBasicEnabled(enabled) {
     this.basicEnabled = enabled
     this.lib.setBasicEnabled(enabled)
@@ -577,13 +601,13 @@ class Atari800 {
   }
 
 }// end include: /Users/nwah/Atari/atari800/src/wasm/wrapper.js
-// include: /var/folders/4n/w714g6px7f7cyhb1jz1yzfm00000gn/T/tmp43olrejb.js
+// include: /var/folders/4n/w714g6px7f7cyhb1jz1yzfm00000gn/T/tmph5_8wcnh.js
 
     if (!Module['preRun']) throw 'Module.preRun should exist because file support used it; did a pre-js delete it?';
     necessaryPreJSTasks.forEach(function(task) {
       if (Module['preRun'].indexOf(task) < 0) throw 'All preRun tasks that exist before user pre-js code should remain after; did you replace Module or modify Module.preRun?';
     });
-  // end include: /var/folders/4n/w714g6px7f7cyhb1jz1yzfm00000gn/T/tmp43olrejb.js
+  // end include: /var/folders/4n/w714g6px7f7cyhb1jz1yzfm00000gn/T/tmph5_8wcnh.js
 
 
 // Sometimes an existing Module object exists with properties

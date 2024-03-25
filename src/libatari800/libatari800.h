@@ -278,6 +278,12 @@ int libatari800_next_frame(input_template_t *input);
 
 int libatari800_mount_disk_image(int diskno, const char *filename, int readonly);
 
+void libatari800_dismount(int diskno);
+
+int libatari800_insert_cartridge_auto_reboot(const char *filename);
+
+void libatari800_remove_cartridge_auto_reboot();
+
 int libatari800_reboot_with_file(const char *filename);
 
 UBYTE *libatari800_get_main_memory_ptr();
@@ -303,6 +309,10 @@ int libatari800_get_frame_number();
 void libatari800_get_current_state(emulator_state_t *state);
 
 void libatari800_restore_state(emulator_state_t *state);
+
+void libatari800_warmstart();
+
+void libatari800_coldstart();
 
 void libatari800_exit();
 
